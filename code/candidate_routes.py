@@ -1,3 +1,5 @@
+import pandas as pd
+
 """
 TODO: team 2 should write the documentation
 The meaning of these variables is straightforward,
@@ -38,16 +40,43 @@ Input:
 Output:
     A list of CandidateRoute objects.
 """
-def candidate_bus_pairs(origin_id, destination_id, location_to_stops):
-    # TODO: team 2 must implement this funtions
-    # Example (TODO: delete this example)
-    bus_pairs = [
-        CandidateRoute(pick_up_id=0, drop_off_id=1,
-                       dist_walk_pick_up=100, dist_walk_drop_off=50,
-                       time_walk_pick_up=80, time_walk_drop_off=40),
-        CandidateRoute(pick_up_id=0, drop_off_id=2,
-                       dist_walk_pick_up=100, dist_walk_drop_off=250,
-                       time_walk_pick_up=80, time_walk_drop_off=200)
-    ]
 
-    return bus_pairs
+
+def candidate_bus_pairs(origin_id, destination_id, location_to_stops):
+    # Extract dataframes from the dictionary
+    df_origin = location_to_stops['origin']
+    df_destination = location_to_stops['destination']
+    df_od = location_to_stops['origin2destination']
+
+    # Direct walking distance and time from origin to destination
+    direct_dist = df_od.loc[(df_od['origin_id'] == origin_id) & (df_od['destination_id'] == destination_id), 'distance'].iloc[0]
+    direct_time = df_od.loc[(df_od['origin_id'] == origin_id) & (df_od['destination_id'] == destination_id), 'time'].iloc[0]
+
+    # Initialize list to store candidate routes
+    candidate_routes = []
+
+    # Iterate over possible pairs of bus stops
+    for _, stop_origin in df_origin.iterrows():
+        for _, stop_destination in df_destination.iterrows():
+            total_walk_distance = stop_origin['distance'] + stop_destination['distance']
+            total_walk_time = stop_origin['time'] + stop_destination['time']
+
+            # Filter out unreasonable routes
+            if total_walk_distance > direct_dist or total_walk_time > direct_time:
+                continue  # Skip if total walking distance/time exceeds direct walking
+
+            if df_origin['stop_id'] == df_destination['stop_id']:
+                continue  # Skip same stop get on/off
+
+
+            candidate_route = CandidateRoute(
+                pick_up_id=stop_origin['stop_id'],
+                drop_off_id=stop_destination['stop_id'],
+                dist_walk_pick_up=stop_origin['distance'],
+                dist_walk_drop_off=stop_destination['distance'],
+                time_walk_pick_up=stop_origin['time'],
+                time_walk_drop_off=stop_destination['time']
+            )
+            candidate_routes.append(candidate_route)
+
+    return candidate_routes
